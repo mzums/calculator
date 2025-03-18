@@ -16,7 +16,7 @@ A command-line scientific calculator implemented in Rust, capable of evaluating 
 2. Clone the repository:
    ```bash
    git clone https://github.com/mzums/calculator
-   cd calculator-rs
+   cd calculator
    ```
 3. Run the project:
    ```bash
