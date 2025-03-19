@@ -9,6 +9,7 @@ A command-line scientific calculator implemented in Rust, capable of evaluating 
 - **Constants**: Define and reuse constants (e.g., `export pi = 3.14159`).
 - **REPL Interface**: Interactive Read-Eval-Print-Loop for quick calculations.
 - **Error Handling**: Detects mismatched parentheses and invalid syntax.
+- **Command history**: Use arrows to navigate to previous lines
 
 ## Installation
 
@@ -64,6 +65,8 @@ Result = 6.28318
 ## Dependencies
 
 - [`regex`](https://crates.io/crates/regex): For tokenizing the input expression.
+- [`rustyline`](https://crates.io/crates/rustyline): For command history
+- [`num traits`](https://crates.io/crates/num-traits)
 
 ## Notes
 

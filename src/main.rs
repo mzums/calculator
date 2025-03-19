@@ -1,5 +1,34 @@
 use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
+use rustyline::error::ReadlineError;
+use rustyline::Editor;
+
+const HELP_MSG: &str = r"
+Scientific Calculator Help:
+---------------------------
+Available operations:
+  Basic: + - * / ^ 
+  Functions: sin(θ) cos(θ) tg(θ) ctg(θ)
+  Parentheses: ( )
+  Constants: export NAME = VALUE
+  
+Examples:
+  3 + 5 * 2
+  sin(45) ^ 2
+  export PI = 3.1415
+  2 * PI / 180
+
+Special commands:
+  help    - Show this message
+  exit    - Quit the program
+  export  - Define constants
+
+Notes:
+- Angles in degrees
+- Use parentheses for explicit order
+- Negative numbers: -5 + 3
+- Ctrl+C to exit
+";
 
 #[derive(Debug, Clone)]
 struct Token {
@@ -73,7 +102,7 @@ fn tokenize(expression: &str, consts: &HashMap<String, String>) -> Vec<Token> {
     tokens
 }
 
-fn rpn(tokens: Vec<Token>) -> Result<Vec<String>, String> {
+fn rpn(tokens: Vec<Token>) -> std::result::Result<Vec<String>, String>  {
     let mut stack: Vec<Token> = Vec::new();
     let mut trygo_stack: Vec<Token> = Vec::new();
     let mut out: Vec<String> = vec![];
@@ -262,34 +291,56 @@ fn calculator(expr: &str, consts: &HashMap<String, String>) -> Option<f64> {
 }
 
 fn main() {
+    let mut rl = Editor::<(), _>::new().unwrap();
+
     let mut consts: HashMap<String, String> = HashMap::new();
     let assign_regex = Regex::new(r"^export\s+\w+\s*=\s*.*$").unwrap();
-    let keywords: [&str; 5] = ["export", "sin", "cos", "tg", "ctg"];
+    let keywords: [&str; 6] = ["export", "sin", "cos", "tg", "ctg", "help"];
+    println!("Welcome to this Scientific Calculator written in Rust!");
+    println!("Type help for instructions\n");
+
+    let _ = rl.load_history("history.txt");
 
     loop {
-        let mut expr = String::new();
-        let _ = std::io::stdin().read_line(&mut expr);
-        let expr_trimmed = expr.trim();
-
-        if assign_regex.is_match(expr_trimmed) {
-            let parts: Vec<&str> = expr_trimmed.splitn(2, '=').collect();
-            let var_name = parts[0].trim_start_matches("export").trim();
-            if !var_name.chars().all(|c| c.is_alphabetic()) || keywords.contains(&var_name) {
-                println!("Please choose different variable name");
-                continue;
+        match rl.readline(">> ") {
+            Ok(line) => {
+                if line.trim() == "exit" {
+                    println!("Exiting...");
+                    break;
+                }
+                else if line == "help" {
+                    println!("{}", HELP_MSG);
+                }
+                else if assign_regex.is_match(line.as_str()) {
+                    let parts: Vec<&str> = line.splitn(2, '=').collect();
+                    let var_name = parts[0].trim_start_matches("export").trim();
+                    if !var_name.chars().all(|c| c.is_alphabetic()) || keywords.contains(&var_name) {
+                        println!("Please choose different variable name");
+                        continue;
+                    }
+        
+                    let value = calculator(parts[1].trim(), &consts);
+                    match value {
+                        Some(result) => {
+                            println!("Variable: {}, Value: {}", var_name, result);
+                            consts.insert(var_name.to_string(), result.to_string());
+                        },
+                        None => println!("Error: Invalid operation in RPN."),
+                    }
+                } else {
+                    calculator(&line, &consts);
+                }
+                let _ = rl.add_history_entry(line.as_str());
             }
-
-            let value = calculator(parts[1].trim(), &consts);
-            match value {
-                Some(result) => {
-                    println!("Variable: {}, Value: {}", var_name, result);
-                    consts.insert(var_name.to_string(), result.to_string());
-                },
-                None => println!("Error: Invalid operation in RPN."),
+            Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
+                println!("Exiting...");
+                break;
             }
-        } else {
-            calculator(expr_trimmed, &consts);
+            Err(_) => {
+                println!("Error");
+                break;
+            }
         }
-        println!();
     }
+    let _ = rl.save_history("history.txt");
 }
